@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#FF3D7F">
+<title>Flo's JGA in Breslau</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0F0E17;
+    --bg-2: #1A1825;
+    --ink: #FFFFFE;
+    --ink-dim: #A7A9BE;
+    --pink: #FF3D7F;
+    --lime: #D4FF3D;
+    --cream: #FFF8E7;
+    --violet: #7B5CFF;
+    --orange: #FF7A1A;
+    --line: rgba(255,255,254,0.12);
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:'Bricolage Grotesque',sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    overflow-x:hidden;
+    overscroll-behavior:none;
+    background-image:
+      radial-gradient(at 20% 0%, rgba(255,61,127,0.18) 0px, transparent 50%),
+      radial-gradient(at 80% 100%, rgba(123,92,255,0.18) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(212,255,61,0.08) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  /* Grain overlay */
+  body::before{
+    content:'';
+    position:fixed;inset:0;
+    pointer-events:none;
+    opacity:0.04;
+    z-index:1;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .app{
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 24px 20px 100px;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* HEADER */
+  header{
+    margin-bottom: 24px;
+    position: relative;
+  }
+  .kicker{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--lime);
+    margin-bottom: 8px;
+  }
+  .kicker::before{
+    content:'';
+    width:6px;height:6px;border-radius:50%;
+    background: var(--lime);
+    box-shadow: 0 0 12px var(--lime);
+    animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1;transform:scale(1)}
+    50%{opacity:0.4;transform:scale(0.85)}
+  }
+  h1{
+    font-size: clamp(38px, 11vw, 52px);
+    line-height: 0.95;
+    letter-spacing:-0.03em;
+    font-weight: 800;
+  }
+  h1 .em{
+    font-family:'Instrument Serif',serif;
+    font-style:italic;
+    font-weight:400;
+    color: var(--pink);
+    letter-spacing: -0.01em;
+  }
+  .settings-btn{
+    position:absolute;
+    top:0; right:0;
+    width:40px;height:40px;
+    border-radius:50%;
+    background: var(--bg-2);
+    border:1px solid var(--line);
+    color: var(--ink);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    transition: transform 0.2s;
+  }
+  .settings-btn:active{transform: rotate(60deg)}
+  .settings-btn svg{width:18px;height:18px}
+
+  /* TABS */
+  .tabs{
+    display:flex;
+    background: var(--bg-2);
+    border:1px solid var(--line);
+    border-radius: 100px;
+    padding: 5px;
+    margin-bottom: 28px;
+    position: sticky;
+    top: 12px;
+    z-index: 50;
+    backdrop-filter: blur(20px);
+    background: rgba(26,24,37,0.85);
+  }
+  .tab{
+    flex:1;
+    padding: 12px 8px;
+    background:none;
+    border:none;
+    color: var(--ink-dim);
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: 100px;
+    cursor: pointer;
+    transition: color 0.3s;
+    position:relative;
+    z-index:2;
+  }
+  .tab.active{color: var(--bg)}
+  .tab-slider{
+    position:absolute;
+    top:5px;
+    height: calc(100% - 10px);
+    width: calc(50% - 5px);
+    background: var(--lime);
+    border-radius: 100px;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index:1;
+  }
+  .tab-slider.right{ transform: translateX(100%) }
+
+  /* VIEWS */
+  .view{display:none;animation: fadeUp 0.5s ease}
+  .view.active{display:block}
+  @keyframes fadeUp{
+    from{opacity:0;transform:translateY(8px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+
+  /* WOCHENEND CHALLENGES */
+  .section-label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin-bottom: 14px;
+    display:flex;align-items:center;gap:10px;
+  }
+  .section-label::after{
+    content:'';flex:1;height:1px;background:var(--line);
+  }
+
+  .we-challenges{
+    display:flex;
+    flex-direction:column;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .we-card{
+    background: var(--cream);
+    color: #1A1825;
+    border-radius: 24px;
+    padding: 22px 22px 20px;
+    position:relative;
+    overflow:hidden;
+    box-shadow: 0 20px 40px -20px rgba(255,61,127,0.4);
+    animation: cardIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .we-card:nth-child(2){animation-delay: 0.1s}
+  @keyframes cardIn{
+    from{opacity:0;transform:translateY(20px) scale(0.95)}
+    to{opacity:1;transform:translateY(0) scale(1)}
+  }
+  .we-card .num{
+    font-family:'Instrument Serif',serif;
+    font-style:italic;
+    font-size: 70px;
+    line-height: 1;
+    position:absolute;
+    top: -8px;
+    right: 16px;
+    color: var(--pink);
+    opacity: 0.85;
+  }
+  .we-card .tag{
+    display:inline-block;
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.15em;
+    text-transform:uppercase;
+    background: #1A1825;
+    color: var(--cream);
+    padding: 4px 10px;
+    border-radius: 100px;
+    margin-bottom: 14px;
+  }
+  .we-card .title{
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+    padding-right: 60px;
+  }
+  .we-card .desc{
+    font-size: 15px;
+    line-height: 1.45;
+    color: #4A4858;
+  }
+
+  .reroll-btn{
+    width:100%;
+    padding: 18px;
+    background: var(--bg-2);
+    border: 1px dashed var(--line);
+    color: var(--ink);
+    border-radius: 20px;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+  }
+  .reroll-btn:active{transform: scale(0.98); background: var(--violet); border-color: var(--violet)}
+  .reroll-btn svg{width:18px;height:18px}
+
+  .empty-state{
+    text-align:center;
+    padding: 60px 20px;
+    color: var(--ink-dim);
+  }
+  .empty-state .big{
+    font-family:'Instrument Serif',serif;
+    font-style:italic;
+    font-size: 32px;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+
+  .we-empty{
+    background: var(--bg-2);
+    border: 1px dashed var(--line);
+    border-radius: 24px;
+    padding: 40px 24px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  /* SLOT MACHINE */
+  .slot-machine{
+    background: linear-gradient(180deg, #2A1F3D 0%, #1A1825 100%);
+    border-radius: 20px;
+    padding: 18px 14px;
+    position: relative;
+    box-shadow:
+      inset 0 2px 0 rgba(255,255,254,0.06),
+      inset 0 -2px 0 rgba(0,0,0,0.4),
+      0 20px 50px -20px rgba(0,0,0,0.6);
+    margin-bottom: 20px;
+    border: 2px solid rgba(255,61,127,0.3);
+  }
+  .slot-machine::before, .slot-machine::after{
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    background: radial-gradient(circle, var(--lime), #6B8500);
+    border-radius: 50%;
+    top: 50%;
+    transform: translateY(-50%);
+    box-shadow: 0 0 12px var(--lime);
+    animation: blink 1s infinite alternate;
+  }
+  .slot-machine::before{left: -6px}
+  .slot-machine::after{right: -6px; animation-delay: 0.5s}
+  @keyframes blink{
+    from{opacity:0.4}
+    to{opacity:1}
+  }
+
+  .reels{
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    background: #0A0814;
+    border-radius: 14px;
+    padding: 10px;
+    border: 1px solid rgba(255,255,254,0.05);
+  }
+  .reel-window{
+    height: 110px;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.5) 100%);
+    border-radius: 10px;
+    position: relative;
+  }
+  .reel-window::before{
+    content:'';
+    position:absolute;
+    top:0;left:0;right:0;
+    height: 30px;
+    background: linear-gradient(180deg, rgba(10,8,20,0.95), transparent);
+    z-index: 3;
+    pointer-events: none;
+  }
+  .reel-window::after{
+    content:'';
+    position:absolute;
+    bottom:0;left:0;right:0;
+    height: 30px;
+    background: linear-gradient(0deg, rgba(10,8,20,0.95), transparent);
+    z-index: 3;
+    pointer-events: none;
+  }
+  .reel-strip{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.1s linear;
+  }
+  .reel-symbol{
+    height: 110px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 54px;
+    flex-shrink: 0;
+  }
+
+  .slot-status{
+    text-align:center;
+    margin-top: 14px;
+    font-family:'JetBrains Mono',monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--lime);
+    min-height: 16px;
+  }
+  .slot-status.win{
+    color: var(--lime);
+    animation: winFlash 0.5s ease 3;
+  }
+  @keyframes winFlash{
+    0%,100%{opacity:1}
+    50%{opacity:0.4}
+  }
+
+  /* SPONTAN VIEW */
+  .spontan-stage{
+    margin-top: 4px;
+  }
+  .draw-area{
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    padding: 28px 20px;
+    text-align:center;
+    position:relative;
+    overflow:hidden;
+    min-height: 340px;
+    display:flex;flex-direction:column;justify-content:center;
+  }
+  .draw-area::before{
+    content:'';position:absolute;inset:0;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(255,61,127,0.15), transparent 60%),
+      radial-gradient(circle at 50% 100%, rgba(212,255,61,0.1), transparent 60%);
+    pointer-events:none;
+  }
+
+  .draw-prompt{
+    position:relative;z-index:2;
+  }
+  .draw-prompt .big-emoji{
+    font-size: 64px;
+    margin-bottom: 16px;
+    display:inline-block;
+    animation: wiggle 2s ease-in-out infinite;
+  }
+  @keyframes wiggle{
+    0%,100%{transform:rotate(-8deg)}
+    50%{transform:rotate(8deg)}
+  }
+  .draw-prompt h2{
+    font-family:'Instrument Serif',serif;
+    font-style:italic;
+    font-weight:400;
+    font-size: 32px;
+    line-height: 1.1;
+    margin-bottom: 8px;
+  }
+  .draw-prompt p{
+    color: var(--ink-dim);
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+
+  .draw-btn{
+    background: var(--pink);
+    color: var(--cream);
+    border:none;
+    padding: 18px 32px;
+    border-radius: 100px;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 12px 30px -8px rgba(255,61,127,0.6);
+    display:inline-flex;align-items:center;gap:10px;
+    position:relative;
+    z-index:2;
+  }
+  .draw-btn:active{transform: scale(0.96)}
+  .draw-btn:disabled{
+    background: var(--bg);
+    color: var(--ink-dim);
+    box-shadow:none;
+    cursor: not-allowed;
+  }
+  .draw-btn .arrow{
+    display:inline-block;
+    transition: transform 0.3s;
+  }
+  .draw-btn:hover .arrow{transform: translateX(4px)}
+
+  /* DRAWING ANIMATION */
+  .drawing{
+    position:relative;z-index:2;
+  }
+
+  /* RESULT CARD */
+  .result-card{
+    position:relative;z-index:2;
+    animation: resultIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes resultIn{
+    from{opacity:0;transform:scale(0.8) rotate(-2deg)}
+    to{opacity:1;transform:scale(1) rotate(0)}
+  }
+  .result-card .num-tag{
+    font-family:'JetBrains Mono',monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--lime);
+    margin-bottom: 16px;
+  }
+  .result-card h2{
+    font-family:'Bricolage Grotesque',sans-serif;
+    font-weight: 800;
+    font-size: 28px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+  }
+  .result-card .desc{
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ink-dim);
+    margin-bottom: 28px;
+  }
+  .result-actions{
+    display:flex;
+    gap: 10px;
+  }
+  .result-actions button{
+    flex:1;
+    padding: 14px;
+    border-radius: 100px;
+    border:none;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: transform 0.15s;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+  }
+  .result-actions button:active{transform:scale(0.96)}
+  .btn-success{
+    background: var(--lime);
+    color: var(--bg);
+  }
+  .btn-fail{
+    background: transparent;
+    border: 1px solid var(--line) !important;
+    color: var(--ink);
+  }
+
+  /* STATS BAR */
+  .stats-bar{
+    display:flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .stat{
+    flex:1;
+    background: var(--bg-2);
+    border:1px solid var(--line);
+    border-radius: 16px;
+    padding: 14px 16px;
+  }
+  .stat .num{
+    font-family:'Instrument Serif',serif;
+    font-style:italic;
+    font-size: 28px;
+    line-height: 1;
+  }
+  .stat .num.pink{color: var(--pink)}
+  .stat .num.lime{color: var(--lime)}
+  .stat .num.violet{color: var(--violet)}
+  .stat .lbl{
+    font-family:'JetBrains Mono',monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin-top: 4px;
+  }
+
+  /* COMPLETED LIST */
+  .completed-list{
+    margin-top: 28px;
+  }
+  .completed-item{
+    background: var(--bg-2);
+    border:1px solid var(--line);
+    border-radius: 18px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display:flex;
+    align-items:center;
+    gap: 14px;
+    animation: slideIn 0.4s ease both;
+  }
+  @keyframes slideIn{
+    from{opacity:0;transform: translateX(-8px)}
+    to{opacity:1;transform: translateX(0)}
+  }
+  .completed-item .icon{
+    width: 38px;height:38px;
+    border-radius: 12px;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+    font-size: 18px;
+  }
+  .completed-item.success .icon{background: rgba(212,255,61,0.15); color: var(--lime)}
+  .completed-item.fail .icon{background: rgba(255,61,127,0.15); color: var(--pink)}
+  .completed-item.pending .icon{background: rgba(123,92,255,0.15); color: var(--violet)}
+  .completed-item .content{flex:1;min-width:0}
+  .completed-item .title{
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.3;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+  }
+  .completed-item .meta{
+    font-family:'JetBrains Mono',monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin-top: 4px;
+  }
+  .completed-item.success .meta{color: var(--lime)}
+  .completed-item.fail .meta{color: var(--pink)}
+
+  .mini-actions{
+    display:flex;gap:6px;
+  }
+  .mini-btn{
+    width:32px;height:32px;
+    border-radius: 10px;
+    border:none;
+    background: var(--bg);
+    color: var(--ink-dim);
+    cursor: pointer;
+    display:flex;align-items:center;justify-content:center;
+    font-size: 14px;
+    transition: all 0.15s;
+  }
+  .mini-btn:active{transform:scale(0.9)}
+  .mini-btn.active-success{background: var(--lime); color: var(--bg)}
+  .mini-btn.active-fail{background: var(--pink); color: var(--cream)}
+
+  /* MODAL */
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    background: rgba(15,14,23,0.7);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    opacity:0;
+    pointer-events:none;
+    transition: opacity 0.3s;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+  }
+  .modal-overlay.open{
+    opacity:1;
+    pointer-events:auto;
+  }
+  .modal{
+    width: 100%;
+    max-width: 480px;
+    background: var(--bg-2);
+    border-radius: 28px 28px 0 0;
+    padding: 24px 20px 40px;
+    border-top: 1px solid var(--line);
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .modal-overlay.open .modal{transform: translateY(0)}
+  .modal-handle{
+    width: 40px;height:4px;
+    background: var(--line);
+    border-radius: 100px;
+    margin: 0 auto 20px;
+  }
+  .modal h3{
+    font-family:'Instrument Serif',serif;
+    font-style:italic;
+    font-weight:400;
+    font-size: 28px;
+    margin-bottom: 4px;
+  }
+  .modal .sub{
+    color: var(--ink-dim);
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+  .modal-btn{
+    width:100%;
+    padding: 16px;
+    border-radius: 16px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    margin-bottom: 10px;
+    display:flex;align-items:center;gap:12px;
+    transition: all 0.2s;
+  }
+  .modal-btn:active{transform:scale(0.98)}
+  .modal-btn.danger{
+    background: var(--pink);
+    border-color: var(--pink);
+    color: var(--cream);
+  }
+  .modal-btn .ic{
+    width:32px;height:32px;
+    border-radius: 10px;
+    background: var(--bg);
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .modal-btn.danger .ic{background: rgba(255,255,254,0.15)}
+
+  .footer-note{
+    text-align:center;
+    margin-top: 40px;
+    font-family:'JetBrains Mono',monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    opacity: 0.6;
+  }
+  .footer-note .heart{color: var(--pink)}
+
+  /* CONFETTI for success */
+  .confetti{
+    position:fixed;
+    top:-10px;
+    width:8px;height:14px;
+    z-index: 200;
+    pointer-events: none;
+  }
+
+  /* Scroll fix for sticky tabs */
+  @media (max-width: 380px){
+    h1{font-size: 36px}
+    .we-card .title{font-size: 20px}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="kicker">Live in Wrocław</div>
+    <h1>Flo's <span class="em">JGA</span><br>in Breslau</h1>
+    <button class="settings-btn" id="settingsBtn" aria-label="Einstellungen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </header>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab-slider" id="tabSlider"></div>
+    <button class="tab active" data-view="weekend">🍻 Wochenende</button>
+    <button class="tab" data-view="spontan">⚡ Spontan</button>
+  </div>
+
+  <!-- VIEW: WOCHENENDE -->
+  <div class="view active" id="view-weekend">
+    <div class="section-label" id="weLabel">Daueraufgaben</div>
+    <div class="we-challenges" id="weChallenges"></div>
+    <div id="weEmpty" class="we-empty">
+      <span class="big-emoji" style="font-size:56px;display:inline-block;margin-bottom:12px">🎲</span>
+      <h2 style="font-family:'Instrument Serif',serif;font-style:italic;font-weight:400;font-size:28px;line-height:1.1;margin-bottom:8px">Noch keine Wochenend-Challenge</h2>
+      <p style="color:var(--ink-dim);font-size:14px;margin-bottom:20px">Zieh deine erste Daueraufgabe für das Wochenende</p>
+    </div>
+    <button class="reroll-btn" id="rerollBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
+      <span id="rerollLabel">Erste Wochenend-Challenge ziehen</span>
+    </button>
+  </div>
+
+  <!-- VIEW: SPONTAN -->
+  <div class="view" id="view-spontan">
+    <div class="stats-bar">
+      <div class="stat">
+        <div class="num pink" id="statRemaining">22</div>
+        <div class="lbl">Verbleibend</div>
+      </div>
+      <div class="stat">
+        <div class="num lime" id="statSuccess">0</div>
+        <div class="lbl">Bestanden</div>
+      </div>
+      <div class="stat">
+        <div class="num violet" id="statFail">0</div>
+        <div class="lbl">Verkackt</div>
+      </div>
+    </div>
+
+    <div class="spontan-stage">
+      <div class="draw-area" id="drawArea">
+        <div class="draw-prompt" id="drawPrompt">
+          <span class="big-emoji">🎰</span>
+          <h2>Bereit für die nächste Mission?</h2>
+          <p>Drück den Button und das Schicksal entscheidet</p>
+          <button class="draw-btn" id="drawBtn">
+            Challenge ziehen <span class="arrow">→</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="completed-list" id="completedList"></div>
+  </div>
+
+  <div class="footer-note">
+    Made with <span class="heart">♥</span> für Flo · Na zdrowie!
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Einstellungen</h3>
+    <p class="sub">Hier kannst du alles zurücksetzen</p>
+    <button class="modal-btn" id="closeModalBtn">
+      <span class="ic">←</span>
+      Zurück
+    </button>
+    <button class="modal-btn danger" id="resetBtn">
+      <span class="ic">⟲</span>
+      Alles zurücksetzen
+    </button>
+  </div>
+</div>
+
+<script>
+  // =========================
+  // CHALLENGE DATA
+  // =========================
+  const WEEKEND_CHALLENGES = [
+    { title: '"Hochzeit"-Strafe', desc: 'Jedes Mal wenn jemand "Hochzeit" sagt, muss Flo 5 Kniebeugen machen.', tag: 'Strafe' },
+    { title: '"Nein"-Verbot', desc: 'Flo darf das ganze Wochenende nicht "Nein" sagen – bei Verstoß: ein Shot.', tag: 'Tabu' },
+    { title: 'Skurrile Gruppenfotos', desc: 'Macht Fotos an 5 möglichst absurden Orten in Breslau.', tag: 'Foto-Quest' },
+    { title: 'Polnische Vokabeln', desc: 'Flo muss bis Sonntag 20 polnische Wörter fließend benutzen können.', tag: 'Sprach-Mission' },
+    { title: 'Videobotschaften für die Braut', desc: 'Sammelt im Laufe des Wochenendes 8 Videobotschaften für die Braut – von Kumpels, Fremden, Bedienungen, Polizisten – was auch immer geht.', tag: 'Sammel-Quest' }
+  ];
+
+  const SPONTAN_CHALLENGES = [
+    { title: 'High-Five-Sammler', desc: '10 High Fives von Fremden in 15 Minuten sammeln.' },
+    { title: 'Internationaler Toast', desc: 'Mit komplett fremden Leuten anstoßen ("Na zdrowie!").' },
+    { title: 'Karaoke-Moment', desc: 'Spontan ein deutsches Lied auf offener Straße singen.' },
+    { title: 'Telefon-Roulette', desc: 'Bei der Mutter oder Schwiegermutter anrufen und auf Polnisch grüßen.' },
+    { title: 'Speed-Dating', desc: 'In 60 Sekunden 3 Fremden vom Bräutigam-Sein erzählen.' },
+    { title: 'Foto mit Polizei', desc: 'Selfie mit polnischen Polizisten (höflich fragen!).' },
+    { title: 'Trinkspruch auf Polnisch', desc: 'Eine ganze Bar zum Anstoßen bringen.' },
+    { title: 'Souvenir-Jagd', desc: 'In 10 Minuten ein möglichst kitschiges Souvenir auftreiben.' },
+    { title: 'Pierogi-Bestellung', desc: 'Komplett auf Polnisch Essen bestellen.' },
+    { title: 'Zwergen-Pose', desc: 'Wie einer der Breslauer Zwerge posieren und Foto machen.' },
+    { title: 'Tausch-Geschäft', desc: 'Einen wertlosen Gegenstand gegen etwas Besseres eintauschen.' },
+    { title: 'Hochzeitstanz', desc: 'Mitten in einer Bar einen Hochzeitswalzer mit einem Kumpel tanzen.' },
+    { title: 'Trinkspiel mit Locals', desc: 'Eine Gruppe Polen zum Trinkspiel überreden.' },
+    { title: 'Polnische Lovestory', desc: 'Einen Fremden bitten, dir einen polnischen Liebesspruch beizubringen.' },
+    { title: 'Marktplatz-Rede', desc: 'Spontan auf einer Bank/Stufe stehen und eine 1-Minuten-Rede über die Liebe halten.' },
+    { title: 'Polnisches Selfie', desc: 'Mit einem polnischen Schild/Werbeplakat posieren als wäre es Werbung für dich.' },
+    { title: 'Schluck-Diplomatie', desc: 'Mit einem Fremden trinken, nur mit Gesten kommunizieren.' },
+    { title: 'Statue spielen', desc: '1 Minute lang regungslos auf dem Marktplatz wie eine Statue stehen.' },
+    { title: 'Fremde Sprache lernen', desc: 'Einem Fremden ein deutsches Wort beibringen und ein polnisches lernen.' },
+    { title: 'Café-Charme', desc: 'Einer Bedienung auf Polnisch ein Kompliment machen.' },
+    { title: 'Gruppenfoto-Diktator', desc: 'Eine zufällige Personengruppe bitten, mit euch ein albernes Gruppenfoto zu machen.' },
+    { title: 'Anti-Diät', desc: 'Innerhalb einer Stunde 3 verschiedene polnische Süßigkeiten probieren.' },
+    { title: 'Oscar-Dankesrede', desc: 'Halt eine spontane Oscar-Dankesrede für die "beste Entscheidung deines Lebens" – inklusive Tränen, Danksagungen und zitternder Stimme.' }
+  ];
+
+  // =========================
+  // STATE & PERSISTENCE
+  // =========================
+  const STORAGE_KEY = 'flo-jga-breslau-v1';
+  let state = loadState();
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        // sanity
+        if(Array.isArray(parsed.weekendShown) && Array.isArray(parsed.completed)){
+          return parsed;
+        }
+      }
+    }catch(e){}
+    return {
+      weekendShown: [], // indices of WEEKEND_CHALLENGES currently shown (max 2)
+      weekendUsed: [],  // all indices ever shown (so reroll doesn't repeat)
+      completed: []     // { idx, status: 'success'|'fail'|'pending', ts }
+    };
+  }
+
+  function saveState(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  // =========================
+  // TABS
+  // =========================
+  const tabSlider = document.getElementById('tabSlider');
+  document.querySelectorAll('.tab').forEach((tab, i) => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      tabSlider.classList.toggle('right', i === 1);
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('view-' + tab.dataset.view).classList.add('active');
+      window.scrollTo({top: 0, behavior: 'smooth'});
+    });
+  });
+
+  // =========================
+  // WEEKEND CHALLENGES
+  // =========================
+  function pickWeekendChallenge(){
+    const available = WEEKEND_CHALLENGES
+      .map((_, i) => i)
+      .filter(i => !state.weekendUsed.includes(i));
+    if(available.length === 0){
+      // all used, reset pool but keep current shown
+      state.weekendUsed = [...state.weekendShown];
+      return pickWeekendChallenge();
+    }
+    return available[Math.floor(Math.random() * available.length)];
+  }
+
+  function initWeekend(){
+    // Don't auto-pick anything - let user draw via button
+    renderWeekend();
+  }
+
+  function renderWeekend(){
+    const cont = document.getElementById('weChallenges');
+    const empty = document.getElementById('weEmpty');
+    const label = document.getElementById('weLabel');
+    const rerollLabel = document.getElementById('rerollLabel');
+
+    cont.innerHTML = '';
+
+    if(state.weekendShown.length === 0){
+      empty.style.display = 'block';
+      label.style.display = 'none';
+      rerollLabel.textContent = 'Erste Wochenend-Challenge ziehen';
+    } else {
+      empty.style.display = 'none';
+      label.style.display = 'flex';
+      rerollLabel.textContent = 'Noch eine Wochenend-Challenge?';
+
+      state.weekendShown.forEach((idx, i) => {
+        const ch = WEEKEND_CHALLENGES[idx];
+        const card = document.createElement('div');
+        card.className = 'we-card';
+        card.innerHTML = `
+          <span class="tag">${ch.tag}</span>
+          <div class="num">${String(i+1).padStart(2,'0')}</div>
+          <div class="title">${ch.title}</div>
+          <div class="desc">${ch.desc}</div>
+        `;
+        cont.appendChild(card);
+      });
+    }
+
+    // Disable button if all used up
+    const rerollBtn = document.getElementById('rerollBtn');
+    const allUsed = state.weekendShown.length >= WEEKEND_CHALLENGES.length;
+    rerollBtn.disabled = allUsed;
+    if(allUsed){
+      rerollLabel.textContent = 'Alle Wochenend-Challenges gezogen 🏆';
+    }
+  }
+
+  document.getElementById('rerollBtn').addEventListener('click', () => {
+    if(state.weekendShown.length >= WEEKEND_CHALLENGES.length) return;
+    const newIdx = pickWeekendChallenge();
+    state.weekendShown.push(newIdx);
+    if(!state.weekendUsed.includes(newIdx)) state.weekendUsed.push(newIdx);
+    saveState();
+    renderWeekend();
+    if(navigator.vibrate) navigator.vibrate(50);
+    // scroll to newest card
+    setTimeout(() => {
+      const cards = document.querySelectorAll('.we-card');
+      if(cards.length){
+        cards[cards.length-1].scrollIntoView({behavior:'smooth', block:'center'});
+      }
+    }, 100);
+  });
+
+  // =========================
+  // SPONTAN CHALLENGES
+  // =========================
+  function availableSpontanIndices(){
+    const usedIdx = new Set(state.completed.map(c => c.idx));
+    return SPONTAN_CHALLENGES
+      .map((_, i) => i)
+      .filter(i => !usedIdx.has(i));
+  }
+
+  function updateStats(){
+    const remaining = availableSpontanIndices().length;
+    const success = state.completed.filter(c => c.status === 'success').length;
+    const fail = state.completed.filter(c => c.status === 'fail').length;
+    document.getElementById('statRemaining').textContent = remaining;
+    document.getElementById('statSuccess').textContent = success;
+    document.getElementById('statFail').textContent = fail;
+  }
+
+  const drawArea = document.getElementById('drawArea');
+  const drawBtn = document.getElementById('drawBtn');
+
+  // Slot machine symbols
+  const SLOT_SYMBOLS = ['🍺', '🚬', '🥃', '🍻', '🎰', '💃', '🕺', '🍷', '🎲', '💋', '🥂', '🌭'];
+
+  drawBtn.addEventListener('click', drawChallenge);
+
+  function drawChallenge(){
+    const avail = availableSpontanIndices();
+    if(avail.length === 0){
+      drawArea.innerHTML = `
+        <div class="draw-prompt">
+          <span class="big-emoji" style="animation:none">🏆</span>
+          <h2>Alle Challenges gezogen!</h2>
+          <p>Ihr seid Legenden. Zeit für nen Shot. Reset in den Einstellungen.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const chosenIdx = avail[Math.floor(Math.random() * avail.length)];
+
+    // Build the slot machine UI
+    drawArea.innerHTML = `
+      <div class="drawing">
+        <div class="slot-machine">
+          <div class="reels">
+            <div class="reel-window"><div class="reel-strip" id="reel0"></div></div>
+            <div class="reel-window"><div class="reel-strip" id="reel1"></div></div>
+            <div class="reel-window"><div class="reel-strip" id="reel2"></div></div>
+          </div>
+        </div>
+        <div class="slot-status" id="slotStatus">Walzen drehen sich...</div>
+      </div>
+    `;
+
+    // Populate each reel with random symbols
+    const reels = [
+      document.getElementById('reel0'),
+      document.getElementById('reel1'),
+      document.getElementById('reel2')
+    ];
+
+    const symbolHeight = 110; // px
+
+    reels.forEach((reel) => {
+      // Generate 40 random symbols per reel for long spin
+      let html = '';
+      for(let i = 0; i < 40; i++){
+        const sym = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
+        html += `<div class="reel-symbol">${sym}</div>`;
+      }
+      reel.innerHTML = html;
+      reel.style.transform = 'translateY(0)';
+    });
+
+    // Vibrate while spinning (mobile)
+    if(navigator.vibrate) navigator.vibrate([20, 30, 20, 30, 20, 30, 20, 30, 20, 30, 20, 30, 20, 30, 20, 30, 20, 30, 20, 30, 20, 30, 20, 30, 20, 30, 20, 30, 20, 30, 20, 30, 20, 30, 20, 30, 20, 30, 20]);
+
+    // Spin each reel — staggered stop times for slot machine feel
+    const stopTimes = [1100, 1700, 2400];
+    const finalSymbols = [];
+
+    reels.forEach((reel, i) => {
+      // Choose final symbol for this reel
+      const finalSymbol = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
+      finalSymbols.push(finalSymbol);
+      // Replace symbol at position 35 (near end) with finalSymbol for landing
+      const landingIndex = 35;
+      const symbols = reel.querySelectorAll('.reel-symbol');
+      if(symbols[landingIndex]){
+        symbols[landingIndex].textContent = finalSymbol;
+      }
+
+      // Animate via JS for smooth slot-machine feel
+      const startTime = performance.now();
+      const totalDistance = landingIndex * symbolHeight; // distance to scroll
+      const duration = stopTimes[i];
+
+      function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3) }
+
+      function animate(now){
+        const elapsed = now - startTime;
+        const t = Math.min(elapsed / duration, 1);
+        const eased = easeOutCubic(t);
+        const y = -totalDistance * eased;
+        reel.style.transform = `translateY(${y}px)`;
+        if(t < 1){
+          requestAnimationFrame(animate);
+        } else {
+          // Little bounce on landing
+          reel.style.transition = 'transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)';
+          reel.style.transform = `translateY(${-totalDistance + 8}px)`;
+          setTimeout(() => {
+            reel.style.transform = `translateY(${-totalDistance}px)`;
+          }, 80);
+          setTimeout(() => {
+            reel.style.transition = '';
+          }, 250);
+
+          // Click sound (haptic on mobile)
+          if(navigator.vibrate) navigator.vibrate(60);
+        }
+      }
+      requestAnimationFrame(animate);
+    });
+
+    // After all reels stopped, show result
+    setTimeout(() => {
+      const status = document.getElementById('slotStatus');
+      if(status){
+        status.textContent = '★ Deine Challenge ★';
+        status.classList.add('win');
+      }
+      if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
+      setTimeout(() => showResult(chosenIdx), 800);
+    }, stopTimes[2] + 200);
+  }
+
+  function showResult(idx){
+    const ch = SPONTAN_CHALLENGES[idx];
+    // Mark as pending immediately
+    state.completed.unshift({ idx, status: 'pending', ts: Date.now() });
+    saveState();
+
+    drawArea.innerHTML = `
+      <div class="result-card">
+        <div class="num-tag">// CHALLENGE #${String(idx+1).padStart(2,'0')}</div>
+        <h2>${ch.title}</h2>
+        <div class="desc">${ch.desc}</div>
+        <div class="result-actions">
+          <button class="btn-success" id="markSuccess">✓ Bestanden</button>
+          <button class="btn-fail" id="markFail">✗ Verkackt</button>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('markSuccess').addEventListener('click', () => markCompleted(idx, 'success'));
+    document.getElementById('markFail').addEventListener('click', () => markCompleted(idx, 'fail'));
+
+    if(navigator.vibrate) navigator.vibrate(80);
+
+    updateStats();
+    renderCompleted();
+  }
+
+  function markCompleted(idx, status){
+    const entry = state.completed.find(c => c.idx === idx);
+    if(entry){
+      entry.status = status;
+      entry.ts = Date.now();
+    }
+    saveState();
+    updateStats();
+    renderCompleted();
+
+    if(status === 'success'){
+      celebrate();
+    }
+    resetDrawArea();
+  }
+
+  function resetDrawArea(){
+    const avail = availableSpontanIndices();
+    if(avail.length === 0){
+      drawArea.innerHTML = `
+        <div class="draw-prompt">
+          <span class="big-emoji" style="animation:none">🏆</span>
+          <h2>Alle Challenges gezogen!</h2>
+          <p>Ihr seid Legenden. Reset in den Einstellungen.</p>
+        </div>
+      `;
+      return;
+    }
+    drawArea.innerHTML = `
+      <div class="draw-prompt">
+        <span class="big-emoji">🎰</span>
+        <h2>Bereit für die nächste Mission?</h2>
+        <p>Drück den Button und das Schicksal entscheidet</p>
+        <button class="draw-btn" id="drawBtn">
+          Challenge ziehen <span class="arrow">→</span>
+        </button>
+      </div>
+    `;
+    document.getElementById('drawBtn').addEventListener('click', drawChallenge);
+  }
+
+  function renderCompleted(){
+    const list = document.getElementById('completedList');
+    if(state.completed.length === 0){
+      list.innerHTML = '';
+      return;
+    }
+
+    list.innerHTML = `
+      <div class="section-label">Verlauf</div>
+      ${state.completed.map(c => {
+        const ch = SPONTAN_CHALLENGES[c.idx];
+        if(!ch) return '';
+        let icon = '⏳', metaText = 'Offen';
+        if(c.status === 'success'){icon = '✓'; metaText = 'Bestanden'}
+        if(c.status === 'fail'){icon = '✗'; metaText = 'Verkackt'}
+        return `
+          <div class="completed-item ${c.status}">
+            <div class="icon">${icon}</div>
+            <div class="content">
+              <div class="title">${ch.title}</div>
+              <div class="meta">${metaText}</div>
+            </div>
+            <div class="mini-actions">
+              <button class="mini-btn ${c.status==='success'?'active-success':''}" data-idx="${c.idx}" data-action="success" aria-label="Bestanden">✓</button>
+              <button class="mini-btn ${c.status==='fail'?'active-fail':''}" data-idx="${c.idx}" data-action="fail" aria-label="Verkackt">✗</button>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    `;
+
+    list.querySelectorAll('.mini-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.idx);
+        const action = btn.dataset.action;
+        const entry = state.completed.find(c => c.idx === idx);
+        if(entry){
+          entry.status = action;
+          saveState();
+          updateStats();
+          renderCompleted();
+          if(action === 'success') celebrate();
+        }
+      });
+    });
+  }
+
+  // =========================
+  // MODAL & RESET
+  // =========================
+  const modal = document.getElementById('modal');
+  document.getElementById('settingsBtn').addEventListener('click', () => modal.classList.add('open'));
+  document.getElementById('closeModalBtn').addEventListener('click', () => modal.classList.remove('open'));
+  modal.addEventListener('click', (e) => {
+    if(e.target === modal) modal.classList.remove('open');
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if(confirm('Wirklich alles zurücksetzen? Wochenend-Challenges und Verlauf werden gelöscht.')){
+      localStorage.removeItem(STORAGE_KEY);
+      state = loadState();
+      initWeekend();
+      updateStats();
+      renderCompleted();
+      resetDrawArea();
+      modal.classList.remove('open');
+    }
+  });
+
+  // =========================
+  // CONFETTI
+  // =========================
+  function celebrate(){
+    const colors = ['#FF3D7F', '#D4FF3D', '#7B5CFF', '#FF7A1A', '#FFF8E7'];
+    for(let i = 0; i < 40; i++){
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.transform = `rotate(${Math.random()*360}deg)`;
+      const dur = 1500 + Math.random() * 1500;
+      c.animate([
+        {transform: `translateY(-10px) rotate(0deg)`, opacity: 1},
+        {transform: `translateY(110vh) rotate(${720 + Math.random()*360}deg)`, opacity: 0.6}
+      ], {duration: dur, easing: 'cubic-bezier(0.25, 1, 0.5, 1)'});
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), dur);
+    }
+    if(navigator.vibrate) navigator.vibrate([60, 40, 60]);
+  }
+
+  // =========================
+  // INIT
+  // =========================
+  initWeekend();
+  updateStats();
+  renderCompleted();
+
+  // Prevent pinch zoom but allow pull-to-refresh disable
+  document.addEventListener('gesturestart', e => e.preventDefault());
+</script>
+
+</body>
+</html>
