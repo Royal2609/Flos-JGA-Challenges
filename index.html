@@ -203,10 +203,11 @@
     font-size: 70px;
     line-height: 1;
     position:absolute;
-    top: -8px;
-    right: 16px;
+    bottom: 10px;
+    right: 20px;
     color: var(--pink);
-    opacity: 0.85;
+    opacity: 0.25;
+    pointer-events: none;
   }
   .we-card .tag{
     display:inline-block;
@@ -226,13 +227,67 @@
     line-height: 1.15;
     letter-spacing: -0.02em;
     margin-bottom: 8px;
-    padding-right: 60px;
   }
   .we-card .desc{
     font-size: 15px;
     line-height: 1.45;
     color: #4A4858;
+    margin-bottom: 16px;
   }
+
+  .we-card-actions{
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .we-status-btn{
+    flex: 1;
+    padding: 11px 8px;
+    border-radius: 100px;
+    border: 1.5px solid #1A1825;
+    background: transparent;
+    color: #1A1825;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .we-status-btn:active{ transform: scale(0.96) }
+  .we-status-btn.active-success{
+    background: var(--lime);
+    border-color: var(--lime);
+    color: #1A1825;
+  }
+  .we-status-btn.active-fail{
+    background: var(--pink);
+    border-color: var(--pink);
+    color: var(--cream);
+  }
+  .we-card.done-success{
+    background: linear-gradient(135deg, var(--cream) 0%, #E8FFD4 100%);
+  }
+  .we-card.done-fail{
+    background: linear-gradient(135deg, var(--cream) 0%, #FFD4E2 100%);
+  }
+  .we-status-badge{
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    font-family:'JetBrains Mono',monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-weight: 700;
+  }
+  .we-status-badge.success{ background: var(--lime); color: #1A1825 }
+  .we-status-badge.fail{ background: var(--pink); color: var(--cream) }
 
   .reroll-btn{
     width:100%;
@@ -864,13 +919,16 @@
         const parsed = JSON.parse(raw);
         // sanity
         if(Array.isArray(parsed.weekendShown) && Array.isArray(parsed.completed)){
+          // Migration: add weekendStatus if missing
+          if(!parsed.weekendStatus) parsed.weekendStatus = {};
           return parsed;
         }
       }
     }catch(e){}
     return {
-      weekendShown: [], // indices of WEEKEND_CHALLENGES currently shown (max 2)
+      weekendShown: [], // indices of WEEKEND_CHALLENGES currently shown
       weekendUsed: [],  // all indices ever shown (so reroll doesn't repeat)
+      weekendStatus: {}, // { [idx]: 'success'|'fail' }
       completed: []     // { idx, status: 'success'|'fail'|'pending', ts }
     };
   }
@@ -933,15 +991,44 @@
 
       state.weekendShown.forEach((idx, i) => {
         const ch = WEEKEND_CHALLENGES[idx];
+        const status = state.weekendStatus[idx]; // 'success' | 'fail' | undefined
         const card = document.createElement('div');
-        card.className = 'we-card';
+        card.className = 'we-card' + (status === 'success' ? ' done-success' : status === 'fail' ? ' done-fail' : '');
+        const badge = status === 'success'
+          ? '<div class="we-status-badge success">✓ Bestanden</div>'
+          : status === 'fail'
+          ? '<div class="we-status-badge fail">✗ Verkackt</div>'
+          : '';
         card.innerHTML = `
           <span class="tag">${ch.tag}</span>
           <div class="num">${String(i+1).padStart(2,'0')}</div>
+          ${badge}
           <div class="title">${ch.title}</div>
           <div class="desc">${ch.desc}</div>
+          <div class="we-card-actions">
+            <button class="we-status-btn ${status==='success'?'active-success':''}" data-idx="${idx}" data-action="success">✓ Bestanden</button>
+            <button class="we-status-btn ${status==='fail'?'active-fail':''}" data-idx="${idx}" data-action="fail">✗ Verkackt</button>
+          </div>
         `;
         cont.appendChild(card);
+      });
+
+      // Wire up status buttons
+      cont.querySelectorAll('.we-status-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.idx);
+          const action = btn.dataset.action;
+          // Toggle: if same status clicked again, clear it
+          if(state.weekendStatus[idx] === action){
+            delete state.weekendStatus[idx];
+          } else {
+            state.weekendStatus[idx] = action;
+            if(action === 'success') celebrate();
+            if(navigator.vibrate) navigator.vibrate(50);
+          }
+          saveState();
+          renderWeekend();
+        });
       });
     }
 
